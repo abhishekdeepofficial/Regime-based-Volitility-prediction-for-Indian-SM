@@ -211,28 +211,38 @@ The TFT model uses `log_target_RV_75bar = log(1 + target_RV_75bar)` as the targe
 - Window: 375 bars (1 week)
 
 ### 7.5 Temporal Fusion Transformer (src/models/tft_dataset.py + train_tft.py)
-- **Architecture:** 1,924.8k parameters (upgraded from 464k)
+
+**Model A** (with autoregressive input):
+- **Architecture:** 1.9M parameters
   - hidden_size=128, attention_head_size=4, dropout=0.15
   - hidden_continuous_size=64, output_size=1 (point prediction)
-  - LSTM encoder + decoder, multi-head attention, gated residual networks
-- **Target:** `log_target_RV_75bar = log(1 + target_RV_75bar)` — predicts next-day realized volatility
+- **Training:** 100 epochs max, early stopping patience=15, gradient_clip=0.1, LR=0.001
+- **Batch limits:** 1000 train batches, 200 val batches per epoch
+
+**Model B v2** (without autoregressive input — Kaggle GPU training):
+- **Architecture:** 7.3M parameters (3.8× larger than Model A)
+  - hidden_size=256, attention_head_size=8, dropout=0.1
+  - hidden_continuous_size=128, output_size=1
+- **Training:** 150 epochs max, early stopping patience=20, gradient_clip=0.05, LR=0.0005
+- **Batch limits:** 1500 train batches, 300 val batches per epoch
+- **Training script:** `kaggle_train_model_b.py` (self-contained for Kaggle)
+
+**Common settings for both models:**
+- **Target:** `log_target_RV_75bar = log(1 + target_RV_75bar)` — next-day RV
 - **Target normalizer:** GroupNormalizer per symbol with softplus transformation
-- **Loss:** RMSE (switched from QuantileLoss for better point prediction accuracy)
+- **Loss:** RMSE
 - **Encoder length:** 75 bars (1 day lookback)
-- **Prediction length:** 1 step (single-step next-day RV prediction)
-- **Training:** 100 epochs max, early stopping patience=15, gradient_clip=0.1, LR reduce patience=6
-- **Batch limits:** 1000 train batches, 200 val batches per epoch (64k samples/epoch)
-- **Learning rate:** 0.001 (reduced from 0.0155 for stability)
+- **Prediction length:** 1 step
 
-**TFT Input Features (21 unknown reals + 7 known reals):**
+**TFT Input Features:**
 
-| Type | Features |
-|------|----------|
-| **Static categorical** | `symbol` |
-| **Known future reals (7)** | `time_idx_global, hour_sin, hour_cos, dow_sin, dow_cos, month_sin, month_cos` |
-| **Known future cats (2)** | `is_opening, is_closing` |
-| **Unknown reals (21)** | `log_return, RV_1h, RV_half_day, RV_1d, RV_1w, volume_zscore, market_correlation, log_target_RV_75bar, garch_volatility, Jump_1d, Jump_ratio, Parkinson_1d, GK_1d, RS_1d, BV_1d, vwap_distance, RV_1d_lag1, RV_1d_lag12, RV_1d_lag75, RV_1w_lag375, log_RV_1d` |
-| **Unknown cats (1)** | `regime` |
+| Type | Model A | Model B |
+|------|---------|--------|
+| **Static categorical** | `symbol` | `symbol` |
+| **Known future reals (7)** | `time_idx_global, hour_sin, hour_cos, dow_sin, dow_cos, month_sin, month_cos` | Same |
+| **Known future cats (2)** | `is_opening, is_closing` | Same |
+| **Unknown reals** | 21 (incl. `log_target_RV_75bar`) | 20 (excl. target) |
+| **Unknown cats (1)** | `regime` | `regime` |
 
 ---
 
@@ -375,15 +385,28 @@ python3 -m src.models.tune_tft
 
 ## 15. ABLATION STUDY SETUP
 
-| | Model A | Model B |
-|---|---------|--------|
-| **Autoregressive input** | ✅ `log_target_RV_75bar` included | ❌ Excluded |
-| **Purpose** | Full model capability | Genuine predictive power |
-| **Training script** | `src/models/train_tft.py` | `src/models/train_model_b.py` |
-| **Checkpoint dir** | `checkpoints/tft/` | `checkpoints/tft_model_b/` |
-| **Comparison** | `src/analysis/compare_models.py` |
+| | Model A | Model B v1 | Model B v2 |
+|---|---------|-----------|------------|
+| **AR input** | ✅ Included | ❌ Excluded | ❌ Excluded |
+| **hidden_size** | 128 | 128 | 256 |
+| **attention_heads** | 4 | 4 | 8 |
+| **Parameters** | 1.9M | 1.9M | 7.3M |
+| **LR / Dropout** | 0.001 / 0.15 | 0.001 / 0.15 | 0.0005 / 0.1 |
+| **R²** | 0.976 | 0.258 | *Training...* |
+| **Script** | `train_tft.py` | `train_model_b.py` | `kaggle_train_model_b.py` |
+| **Checkpoint** | `checkpoints/tft/` | `checkpoints/tft_model_b/` | Kaggle Output |
 
 The `use_autoregressive` flag in `tft_dataset.py` controls which features are included.
+
+### Ablation Results (v1)
+
+| Metric | Model A (with AR) | Model B v1 (w/o AR) | Δ |
+|--------|-------------------|--------------------|---------|
+| R² | **0.976** | 0.258 | −0.718 |
+| RMSE | **0.009** | 0.052 | +0.043 |
+| MAPE | **1.90%** | 19.26% | +17.4pp |
+
+Model B v2 training in progress on Kaggle (T4 GPU) with improved architecture. Expected completion: Feb 23, 2026.
 
 ---
 
@@ -398,16 +421,35 @@ All plots use real timestamps on x-axis and are saved to `reports/figures/`.
 
 ---
 
-## 17. CURRENT STATUS (Feb 18, 2026)
+## 17. KAGGLE CLOUD TRAINING
+
+Model B v2 is trained on Kaggle (free T4 GPU) since local MPS training was too slow (~3 min/batch).
+
+**Setup:**
+1. Data: `pooled_data_with_garch.parquet` uploaded as Kaggle Dataset "Volitility-data"
+2. Code: `kaggle_train_model_b.py` self-contained script (cloned from GitHub)
+3. GPU: Tesla T4 (15.6 GB), ~1.78 it/s, ~14 min/epoch
+
+**Workflow:**
+```bash
+!git clone https://github.com/abhishekdeepofficial/Regime-based-Volitility-prediction-for-Indian-SM.git /kaggle/working/project
+!cd /kaggle/working/project && python kaggle_train_model_b.py
+```
+
+**After training:** Download `.ckpt` from Kaggle Output tab → `checkpoints/tft_model_b/`
+
+---
+
+## 18. CURRENT STATUS (Feb 23, 2026)
 
 - **Data pipeline:** Fully working, 2.65M rows with 47 features across 14 stocks
-- **Target:** Switched from `target_RV_12bar` (1-hour ahead) to `target_RV_75bar` (next-day RV) — more honest and aligned with literature
-- **Model architecture:** Upgraded to 1.9M parameters (hidden_size=128, RMSE loss, single-step prediction)
-- **Features:** 21 unknown reals including 5 HAR-RV lag features and GARCH volatility
-- **Model A (with AR):** Training in progress — best val_loss=0.0058 at Epoch 10
-- **Model B (without AR):** Ready to train after Model A completes
-- **Ablation study:** Scripts prepared for comparison (compare_models.py)
-- **Leakage audit:** Completed — feature-target overlap is zero; autoregressive input has 98.7% rolling overlap (disclosed and mitigated via ablation)
-- **Visualization:** Comprehensive 2-panel plots with train/val splits, timestamps, and per-stock R²
-- **Previous results (h=12, 60-min):** R²=0.27, RMSE=0.033, MAPE=28%
-- **Lightning.ai:** Setup script and code package prepared for GPU training
+- **Model A (with AR):** ✅ Complete — R²=0.976, RMSE=0.009, MAPE=1.90%
+- **Model B v1 (w/o AR):** ✅ Complete — R²=0.258, RMSE=0.052, MAPE=19.26%
+- **Model B v2 (w/o AR, improved):** 🔄 Training on Kaggle T4 GPU (7.3M params, hidden=256, heads=8)
+  - Epoch 0 val_loss: 0.042, Epoch 1 val_loss: 0.043
+  - Expected completion: ~6-8 hours from start
+- **Regime analysis:** All 4 regimes covered (Low/Normal/High/Extreme) with expanded 5,000-step validation
+- **Leakage audit:** ✅ Feature-target overlap zero; AR overlap disclosed and mitigated via ablation
+- **Research paper:** Springer LNCS format (`paper_springer/paper.tex`), drafts in `research_paper.md`
+- **GitHub:** [abhishekdeepofficial/Regime-based-Volitility-prediction-for-Indian-SM](https://github.com/abhishekdeepofficial/Regime-based-Volitility-prediction-for-Indian-SM)
+- **Pending:** Update paper with Model B v2 final results after Kaggle training completes
