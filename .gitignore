@@ -1,0 +1,65 @@
+# === Data ===
+data/
+*.parquet
+*.csv
+!reports/figures/future_forecast/future_forecasts.csv
+
+# === Model Checkpoints ===
+checkpoints/
+*.ckpt
+
+# === Training Logs ===
+lightning_logs/
+tensorboard_logs/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# === Jupyter ===
+.ipynb_checkpoints/
+*.ipynb
+
+# === Environment ===
+.env
+.venv/
+venv/
+env/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# === IDE ===
+.vscode/
+.idea/
+*.code-workspace
+
+# === Build artifacts ===
+paper_build/
+paper_springer/*.aux
+paper_springer/*.log
+paper_springer/*.pdf
+paper_springer/*.out
+paper_springer/*.bbl
+paper_springer/*.blg
+paper_springer/*.synctex.gz
+
+# === Large generated files ===
+*.zip
+*.docx
+ieee_submission_package.zip
+springer_paper.zip
+research_paper.docx
+
+# === Gemini agent ===
+.gemini/

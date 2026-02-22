@@ -1,0 +1,14 @@
+pandas
+numpy
+matplotlib
+seaborn
+scipy
+arch
+statsmodels
+scikit-learn
+hmmlearn
+torch
+pytorch-forecasting
+pytorch-lightning
+tensorboard
+optuna

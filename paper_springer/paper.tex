@@ -1,0 +1,224 @@
+% Springer LNCS format — Condensed to <10 pages
+\documentclass[runningheads]{llncs}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{url}
+
+\begin{document}
+
+\title{Regime-Aware Multi-Asset Volatility Forecasting\\using Temporal Fusion Transformers}
+\titlerunning{Regime-Aware Volatility Forecasting with TFT}
+
+\author{Abhishek Deep\orcidID{0000-0000-0000-0000}}
+
+\authorrunning{A.~Deep}
+
+\institute{Department of Computer Science and Engineering,\\
+Indian Institute of Technology, India\\
+\email{abhishek.deep@example.com}}
+
+\maketitle
+
+\begin{abstract}
+We present a hybrid deep learning framework for forecasting next-day realized volatility across 14 stocks on the National Stock Exchange of India. Our Regime-Aware Temporal Fusion Transformer (RA-TFT) integrates high-frequency 5-minute data ($\sim$2.65M observations), HMM-derived market regimes, DCC-GARCH cross-asset correlations, and GARCH(1,1) conditional volatility into an interpretable attention-based architecture. An ablation study comparing the model with autoregressive input (Model~A, $R^2{=}0.976$) and without (Model~B, $R^2{=}0.258$) quantifies the contribution of volatility persistence versus genuine feature-based prediction. The TFT's variable selection networks reveal that lagged daily realized volatility dominates feature importance, confirming the HAR-RV structure, while regime-specific analysis shows performance degradation during extreme volatility periods.
+
+\keywords{Volatility Forecasting \and Temporal Fusion Transformer \and Hidden Markov Model \and GARCH \and Deep Learning}
+\end{abstract}
+
+%===================================================================
+\section{Introduction}
+%===================================================================
+
+Volatility forecasting is central to financial risk management, option pricing, and portfolio optimization. Traditional approaches---GARCH family models~\cite{bollerslev1986} and the Heterogeneous Autoregressive model of Realized Volatility (HAR-RV)~\cite{corsi2009}---have well-known limitations: GARCH assumes parametric conditional distributions and is restricted to univariate settings, while HAR-RV captures long memory but assumes linear dynamics. Deep learning architectures (LSTMs, Transformers) offer non-linear modeling capacity but typically lack interpretability---a critical requirement in finance.
+
+We propose a \textbf{Regime-Aware Temporal Fusion Transformer (RA-TFT)} that addresses these gaps by integrating: (i)~HMM-derived market regime labels, (ii)~DCC-GARCH cross-asset correlations, (iii)~GARCH(1,1) conditional volatility, and (iv)~HAR-RV lag features into the TFT architecture~\cite{lim2021}. The TFT's built-in Variable Selection Networks (VSN) and multi-head attention provide model-intrinsic interpretability.
+
+Our contributions include: (1)~multi-asset learning across 14 NSE stocks; (2)~regime-aware conditioning via HMM states; (3)~a transparent ablation study disentangling autoregressive persistence from feature-based prediction; (4)~interpretability analysis of learned feature importance and attention patterns; and (5)~first comprehensive TFT-based intraday volatility study on Indian equity markets.
+
+%===================================================================
+\section{Data and Feature Engineering}
+%===================================================================
+
+\subsection{Dataset}
+We use 5-minute OHLCV data for 14 liquid NSE stocks spanning $\sim$10 years: RELIANCE, ADANIPORTS, COALINDIA, HDFCBANK, ICICIBANK, AXISBANK, SBIN, INFY, TCS, WIPRO, LT, HAL, TATASTEEL, and TITAN. Indian market hours (9:15~AM--3:30~PM IST) produce 75 bars per trading day, yielding $\sim$2.65 million total observations.
+
+\subsection{Features (47 total)}
+Features are organized into six categories:
+
+\noindent\textbf{Realized Volatility} (multi-scale): $RV_h = \sqrt{\sum_{i=1}^{h} r_i^2}$ computed over 12 (1h), 38 (half-day), 75 (1d), and 375 (1w) bars, annualized by $\times\sqrt{252}$.
+
+\noindent\textbf{HAR-RV Lags}: Lagged RV at 1-bar, 1-hour, 1-day, and 1-week intervals following Corsi~\cite{corsi2009}.
+
+\noindent\textbf{Jump Detection}: Bipower variation, jump component, and jump ratio based on Barndorff-Nielsen \& Shephard~\cite{bns2004}.
+
+\noindent\textbf{Range Estimators}: Parkinson~\cite{parkinson1980}, Garman-Klass~\cite{garman1980}, Rogers-Satchell~\cite{rogers1991}.
+
+\noindent\textbf{Cross-Asset}: DCC-GARCH proxy correlation with equal-weighted market return. \textbf{GARCH}: Per-stock GARCH(1,1)~\cite{bollerslev1986} conditional volatility.
+
+\noindent\textbf{Temporal}: Cyclical encodings ($\sin$/$\cos$) for hour, day-of-week, month; session flags (\texttt{is\_opening}, \texttt{is\_closing}).
+
+\subsection{Target Variable}
+The target is next-day realized volatility (75-bar forward):
+\begin{equation}
+y_t = \log\!\Big(1 + \sqrt{\textstyle\sum_{i=t+1}^{t+75} r_i^2} \times \sqrt{252}\Big)
+\end{equation}
+using \emph{only future bars}, ensuring zero overlap with backward-looking features.
+
+\subsection{Regime Detection}
+A 4-state Gaussian HMM~\cite{hamilton1989} is trained on market-average log-returns and daily RV, producing states: Low $\to$ Normal $\to$ High $\to$ Extreme volatility.
+
+%===================================================================
+\section{Model Architecture}
+%===================================================================
+
+The TFT~\cite{lim2021} processes 31 input features through Variable Selection Networks (instance-wise softmax gating), Gated Residual Networks (non-linear processing with skip connections), an LSTM encoder-decoder, and multi-head attention (4~heads). Table~\ref{tab:config} summarizes the configuration.
+
+\begin{table}[t]
+\caption{TFT Model Configuration}\label{tab:config}
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value}\\
+\midrule
+Total parameters & 1.9M\\
+Hidden size / Attention heads & 128 / 4\\
+Encoder length / Prediction length & 75 bars (1 day) / 1 step\\
+Dropout / Learning rate & 0.15 / 0.001\\
+Early stopping patience & 15 epochs\\
+Batch size / Train batches per epoch & 64 / 1,000\\
+Target normalizer & GroupNormalizer (per-stock, softplus)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Ablation Study Design}
+To disentangle volatility persistence from genuine predictive power:
+\begin{itemize}
+\item \textbf{Model~A} (with AR): includes $y_{t-1}$ as input, analogous to HAR-RV.
+\item \textbf{Model~B} (without AR): excludes the target, testing pure feature-based prediction.
+\end{itemize}
+Consecutive daily RV targets share 74/75 bars (98.7\% overlap, lag-1 autocorrelation 0.9963). Model~A exploits this persistence; Model~B must rely solely on backward-looking features.
+
+%===================================================================
+\section{Baselines}
+%===================================================================
+
+We compare against: (i)~\textbf{GARCH family} (GARCH(1,1), EGARCH, GJR-GARCH) fitted per stock with Student-t innovations, best model selected by AIC; and (ii)~\textbf{HAR-RV}~\cite{corsi2009} using OLS with Newey-West standard errors. HAR-RV achieves $R^2 > 0.98$ for all stocks, establishing a strong linear baseline.
+
+%===================================================================
+\section{Results}
+%===================================================================
+
+\subsection{Ablation Study}
+
+Table~\ref{tab:ablation} presents the core comparison. Model~A achieves $R^2{=}0.976$, comparable to HAR-RV, confirming the TFT learns autoregressive volatility structure. Model~B ($R^2{=}0.258$) demonstrates modest but non-trivial predictive power from backward-looking features alone. The 71.8pp gap quantifies the autoregressive contribution.
+
+\begin{table}[t]
+\caption{Ablation Study: Model A vs. Model B}\label{tab:ablation}
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Model A (with AR)} & \textbf{Model B (w/o AR)} & \textbf{$\Delta$}\\
+\midrule
+$R^2$ & \textbf{0.9761} & 0.2576 & $-$0.718\\
+RMSE & \textbf{0.0093} & 0.0521 & +0.043\\
+MAPE & \textbf{1.90\%} & 19.26\% & +17.4pp\\
+DA & 52.6\% & 47.5\% & $-$5.1pp\\
+QLIKE & \textbf{$-$0.920} & $-$0.883 & +0.037\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/ablation_comparison.png}
+\caption{Predicted vs.\ actual RV scatter plots. Model~A (left) closely tracks the diagonal; Model~B (right) shows larger dispersion but retains positive correlation.}\label{fig:ablation}
+\end{figure}
+
+Directional accuracy near 50\% for both models indicates that predicting the \emph{direction} of RV changes is harder than predicting levels---consistent with near-random-walk dynamics in log-RV.
+
+\subsection{Per-Stock Heterogeneity}
+Model~B performance varies substantially: ADANIPORTS achieves the best $R^2{=}0.503$, while SBIN yields $R^2{=}{-}1.525$. Stocks with higher Model~B $R^2$ (ADANIPORTS, TATASTEEL, WIPRO) tend to have more predictable volatility from exogenous features, while banking stocks show weaker feature-based predictability.
+
+\subsection{Regime-Specific Performance}
+Table~\ref{tab:regime} shows Model~A performance across HMM-identified regimes.
+
+\begin{table}[t]
+\caption{Regime-Specific Performance (Model A)}\label{tab:regime}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Regime} & \textbf{$N$} & \textbf{$R^2$} & \textbf{RMSE} & \textbf{MAPE}\\
+\midrule
+Low Volatility & 58,066 & 0.989 & 0.007 & 1.67\%\\
+Normal Volatility & 7,910 & 0.987 & 0.008 & 1.51\%\\
+High Volatility & 2,800 & 0.999 & 0.003 & 1.13\%\\
+Extreme Volatility & 1,764 & 0.765 & 0.036 & 6.54\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The model excels in Low/Normal/High regimes ($R^2{>}0.98$) but degrades during Extreme volatility ($R^2{=}0.765$). High Volatility achieves the best $R^2$ (0.999), suggesting that elevated-but-structured volatility is highly predictable. The Stock$\times$Regime heatmap (Fig.~\ref{fig:regime}) reveals that Extreme volatility performance ranges from $R^2{=}0.830$ (TITAN) to $R^2{=}0.312$ (RELIANCE).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/stock_regime_heatmap.png}
+\caption{Stock $\times$ Regime $R^2$ heatmap showing heterogeneous regime sensitivity.}\label{fig:regime}
+\end{figure}
+
+\subsection{Interpretability}
+The TFT's Variable Selection Network reveals encoder feature importance (Fig.~\ref{fig:importance}). \texttt{RV\_1d\_lag75} (1-day lagged RV) dominates with importance 60.4---\emph{two orders of magnitude} above all others---confirming the TFT learns a HAR-RV-like autoregressive structure. Secondary contributors include \texttt{RV\_1w} (0.23), \texttt{market\_correlation} (0.13), and \texttt{garch\_volatility} (0.12).
+
+The decoder weights \texttt{is\_opening} highest (32.3), consistent with the documented opening auction effect in Indian markets where significant price discovery occurs at market open.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/variable_importance.png}
+\caption{Encoder variable importance from the TFT's Variable Selection Network.}\label{fig:importance}
+\end{figure}
+
+%===================================================================
+\section{Data Integrity}
+%===================================================================
+
+We verify: (i)~the target uses \emph{only future bars}, ensuring zero feature-target overlap; (ii)~train/validation split is strictly temporal (no random shuffling); (iii)~the 98.7\% consecutive overlap in rolling RV targets is a natural property of rolling-window estimators (not leakage), transparently addressed via the ablation study.
+
+%===================================================================
+\section{Conclusion}
+%===================================================================
+
+We presented a Regime-Aware Temporal Fusion Transformer for next-day RV forecasting across 14 Indian stocks ($\sim$2.65M observations). Key findings: (1)~Model~A ($R^2{=}0.976$) matches HAR-RV baselines, confirming effective learning of volatility persistence; (2)~Model~B ($R^2{=}0.258$) demonstrates non-trivial feature-based predictive power; (3)~regime analysis reveals strong performance in calm markets ($R^2{>}0.98$) but degradation during crises; (4)~\texttt{RV\_1d\_lag75} dominates feature importance (60.4 vs.\ ${<}0.3$ for others), confirming HAR-RV structure.
+
+Future work includes regime-specific model ensembles for tail events, multi-horizon prediction, Diebold-Mariano significance tests, and deployment in real-time trading systems.
+
+%===================================================================
+\begin{thebibliography}{8}
+
+\bibitem{bollerslev1986}
+Bollerslev, T.: Generalized autoregressive conditional heteroskedasticity. J.~Econometrics \textbf{31}(3), 307--327 (1986)
+
+\bibitem{corsi2009}
+Corsi, F.: A simple approximate long-memory model of realized volatility. J.~Financial Econometrics \textbf{7}(2), 174--196 (2009)
+
+\bibitem{bns2004}
+Barndorff-Nielsen, O.E., Shephard, N.: Power and bipower variation with stochastic volatility and jumps. J.~Financial Econometrics \textbf{2}(1), 1--37 (2004)
+
+\bibitem{parkinson1980}
+Parkinson, M.: The extreme value method for estimating the variance of the rate of return. J.~Business \textbf{53}(1), 61--65 (1980)
+
+\bibitem{garman1980}
+Garman, M.B., Klass, M.J.: On the estimation of security price volatilities from historical data. J.~Business \textbf{53}(1), 67--78 (1980)
+
+\bibitem{rogers1991}
+Rogers, L.C.G., Satchell, S.E.: Estimating variance from high, low and closing prices. Ann.~Appl.~Probab. \textbf{1}(4), 504--512 (1991)
+
+\bibitem{lim2021}
+Lim, B., Ar{\i}k, S.\"{O}., Loeff, N., Pfister, T.: Temporal Fusion Transformers for interpretable multi-horizon time series forecasting. Int.~J.~Forecasting \textbf{37}(4), 1748--1764 (2021)
+
+\bibitem{hamilton1989}
+Hamilton, J.D.: A new approach to the economic analysis of nonstationary time series and the business cycle. Econometrica \textbf{57}(2), 357--384 (1989)
+
+\end{thebibliography}
+
+\end{document}
