@@ -141,33 +141,26 @@ def interpretability_analysis():
         print(importance_df.to_string(index=False))
         importance_df.to_csv(project_root / "variable_importance.csv", index=False)
 
-        # --- Bar chart ---
-        fig, ax = plt.subplots(figsize=(12, 8))
+        # --- Two-panel bar chart (full + zoomed without dominant feature) ---
         top_n = min(15, len(importance_df))
         top_df = importance_df.head(top_n).sort_values('Importance')
 
-        colors = []
-        for var in top_df['Variable']:
-            if 'RV' in var or 'target' in var:
-                colors.append('#e74c3c')
-            elif 'garch' in var.lower():
-                colors.append('#9b59b6')
-            elif 'Jump' in var or 'BV' in var:
-                colors.append('#e67e22')
-            elif 'sin' in var or 'cos' in var or 'time' in var:
-                colors.append('#3498db')
-            elif 'regime' in var.lower():
-                colors.append('#2ecc71')
-            else:
-                colors.append('#95a5a6')
-
-        ax.barh(range(top_n), top_df['Importance'].values, color=colors,
-                edgecolor='black', linewidth=0.5)
-        ax.set_yticks(range(top_n))
-        ax.set_yticklabels(top_df['Variable'].values, fontsize=10)
-        ax.set_xlabel("Importance Weight", fontsize=12)
-        ax.set_title("TFT Encoder Variable Importance (Top 15)", fontsize=14, fontweight='bold')
-        ax.grid(axis='x', alpha=0.3)
+        def get_colors(variables):
+            colors = []
+            for var in variables:
+                if 'RV' in var or 'target' in var:
+                    colors.append('#e74c3c')
+                elif 'garch' in var.lower():
+                    colors.append('#9b59b6')
+                elif 'Jump' in var or 'BV' in var:
+                    colors.append('#e67e22')
+                elif 'sin' in var or 'cos' in var or 'time' in var:
+                    colors.append('#3498db')
+                elif 'regime' in var.lower():
+                    colors.append('#2ecc71')
+                else:
+                    colors.append('#95a5a6')
+            return colors
 
         from matplotlib.patches import Patch
         legend_items = [
@@ -178,11 +171,40 @@ def interpretability_analysis():
             Patch(facecolor='#2ecc71', label='Regime'),
             Patch(facecolor='#95a5a6', label='Other'),
         ]
-        ax.legend(handles=legend_items, loc='lower right', fontsize=9)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8), gridspec_kw={'width_ratios': [1, 1.2]})
+
+        # Left panel: All top 15
+        colors1 = get_colors(top_df['Variable'])
+        ax1.barh(range(top_n), top_df['Importance'].values, color=colors1,
+                 edgecolor='black', linewidth=0.5)
+        ax1.set_yticks(range(top_n))
+        ax1.set_yticklabels(top_df['Variable'].values, fontsize=10)
+        ax1.set_xlabel("Importance Weight", fontsize=12)
+        ax1.set_title("All Features (Top 15)", fontsize=13, fontweight='bold')
+        ax1.grid(axis='x', alpha=0.3)
+
+        # Right panel: Zoomed (exclude top feature)
+        zoomed_df = importance_df.iloc[1:top_n].sort_values('Importance')
+        colors2 = get_colors(zoomed_df['Variable'])
+        n_zoom = len(zoomed_df)
+        ax2.barh(range(n_zoom), zoomed_df['Importance'].values, color=colors2,
+                 edgecolor='black', linewidth=0.5)
+        ax2.set_yticks(range(n_zoom))
+        ax2.set_yticklabels(zoomed_df['Variable'].values, fontsize=10)
+        ax2.set_xlabel("Importance Weight", fontsize=12)
+        ax2.set_title("Zoomed: Features #2–15 (excl. RV_1d_lag75)", fontsize=13, fontweight='bold')
+        ax2.grid(axis='x', alpha=0.3)
+        # Add value labels on bars
+        for i, (val, name) in enumerate(zip(zoomed_df['Importance'].values, zoomed_df['Variable'].values)):
+            ax2.text(val + 0.002, i, f'{val:.3f}', va='center', fontsize=9)
+
+        ax2.legend(handles=legend_items, loc='lower right', fontsize=9)
+        fig.suptitle("TFT Encoder Variable Importance", fontsize=15, fontweight='bold', y=1.01)
         plt.tight_layout()
-        plt.savefig(report_dir / "variable_importance.png", dpi=150)
+        plt.savefig(report_dir / "variable_importance.png", dpi=150, bbox_inches='tight')
         plt.close()
-        print("  Saved variable_importance.png")
+        print("  Saved variable_importance.png (two-panel)")
     else:
         print("\n  No encoder variable weights extracted.")
 
