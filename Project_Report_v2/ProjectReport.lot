@@ -1,0 +1,18 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces Overview of Literature Reviewed}}{6}{table.caption.30}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Selected Stocks and Approximate 5-minute Bar Counts}}{11}{table.caption.45}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Summary Statistics for Daily Realized Volatility (Annualized \%)}}{12}{table.caption.48}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces HMM Regime Distribution and Transition Matrix}}{12}{table.caption.49}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces TFT Hyperparameter Configuration}}{17}{table.caption.73}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Tools and Technologies Used}}{23}{table.caption.97}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces Performance Comparison: TFT Variants vs.\ Classical Baselines}}{24}{table.caption.101}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces Per-Stock $R^2$ for Model~A and Model~B}}{26}{table.caption.104}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces Model~A Performance by Volatility Regime}}{27}{table.caption.108}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {A.1}{\ignorespaces Complete List of 47 Engineered Features}}{35}{table.caption.126}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {B.1}{\ignorespaces $R^2$ for Model~A by Stock and Regime}}{36}{table.caption.128}%

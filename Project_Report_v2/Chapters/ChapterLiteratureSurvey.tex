@@ -1,0 +1,89 @@
+\chapter{LITERATURE SURVEY}
+\label{ChapterLiteratureSurvey}
+
+\section{Literature Collection and Segregation}
+
+The papers reviewed for this project were gathered from IEEE Xplore, Elsevier ScienceDirect, Springer, and Google Scholar. The search keywords included ``volatility forecasting'', ``realized volatility'', ``GARCH deep learning'', ``Temporal Fusion Transformer'', ``Hidden Markov Model finance'', and a few variants. After screening for relevance and methodological rigour, twenty-two papers survived the cut. They fall into three broad groups: classical econometric volatility models, deep learning approaches to volatility, and work on regime-switching combined with interpretable architectures. Table~\ref{tab:litoverview} gives the full list at a glance.
+
+\begin{table}[!t]
+\caption{Overview of Literature Reviewed}
+\label{tab:litoverview}
+\centering
+\scriptsize
+\begin{tabular}{p{4.2cm}cp{7.2cm}}
+\hline
+\textbf{Author(s)} & \textbf{Year} & \textbf{Key Contribution} \\
+\hline
+\multicolumn{3}{l}{\emph{Classical Volatility Models}} \\
+Engle & 1982 & ARCH model; first formal framework for time-varying variance \\
+Bollerslev & 1986 & GARCH(1,1); added lagged variance to the ARCH specification \\
+Parkinson & 1980 & Range-based variance estimator exploiting daily high and low \\
+Garman \& Klass & 1980 & Refined range estimator that also uses open and close \\
+Nelson & 1991 & EGARCH; models log-variance to capture leverage asymmetry \\
+Rogers \& Satchell & 1991 & Drift-robust range-based estimator \\
+Glosten et al. & 1993 & GJR-GARCH with an explicit indicator for negative shocks \\
+Barndorff-Nielsen \& Shephard & 2004 & Bipower variation to separate jump activity from smooth diffusion \\
+Corsi & 2009 & HAR-RV; heterogeneous-horizon three-lag regression on realized volatility \\
+\hline
+\multicolumn{3}{l}{\emph{Deep Learning for Volatility}} \\
+Bucci & 2020 & LSTM outperforms GARCH; the gap widens sharply during crises \\
+Kim \& Won & 2022 & Attention-augmented RNN; attention peaks near macro news events \\
+Wu et al. & 2023 & Full encoder-decoder Transformer beats both HAR-RV and LSTM \\
+Zhang et al. & 2023 & GARCH-initialised neural network embeds econometric priors \\
+Rahimikia \& Poon & 2023 & News sentiment features produce statistically significant gains \\
+Christensen et al. & 2023 & Large-scale survey: non-linear ML consistently beats linear models \\
+\hline
+\multicolumn{3}{l}{\emph{Regime-Switching and Interpretable Architectures}} \\
+Hamilton & 1989 & Markov-switching model for detecting structural breaks \\
+Nystrup et al. & 2021 & HMM-guided portfolio delivers higher Sharpe than static allocation \\
+Lim et al. & 2021 & TFT with VSN and interpretable multi-head attention \\
+Olorunnimbe \& Viktor & 2023 & Applied TFT to equity price prediction \\
+Chen et al. & 2024 & TFT adapted for cryptocurrency volatility \\
+Patel \& Sharma & 2024 & Hybrid regime-aware deep learning tested on emerging markets \\
+Zhao et al. & 2024 & Attention-based multi-scale volatility using high-frequency data \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Critical Review}
+
+\subsection{Classical Econometric Models}
+
+Engle's 1982 paper was really the starting gun for the whole field. Before ARCH, most financial models treated variance as a constant---clearly at odds with what traders observe every day. Bollerslev's GARCH(1,1) added lagged conditional variance to the mix:
+\begin{equation}
+\sigma_t^2 = \omega + \alpha\,\epsilon_{t-1}^2 + \beta\,\sigma_{t-1}^2, \quad \omega>0,\;\alpha,\beta\geq0,\;\alpha+\beta<1
+\end{equation}
+The $\alpha$ coefficient picks up shock sensitivity---how much a single large return pushes up tomorrow's variance---while $\beta$ captures how quickly that effect decays. Taken together, $\alpha+\beta$ close to one signals highly persistent volatility, which is exactly what empirical stock data shows.
+
+Nelson's EGARCH (1991) recast the model in log-variance space, which automatically keeps variance positive without needing parameter constraints. More importantly, it introduced an asymmetry term for the leverage effect: a 5\% drop in price tends to lift implied volatility more than a 5\% gain of the same magnitude. GJR-GARCH (Glosten, Jagannathan, and Runkle, 1993) achieves a similar result through a simpler indicator-variable mechanism. In our own experiments, GJR-GARCH edges out both GARCH and EGARCH, though all three fall well short of HAR-RV.
+
+Range-based estimators offer a complementary angle. Parkinson (1980) showed that a single day's high-low range contains roughly five times more information about variance than the close-to-close return alone. Garman and Klass (1980) refined the idea by folding in open and close prices, and Rogers and Satchell (1991) made the estimator robust to drift---useful when a stock is trending strongly. These estimators form three of the forty-seven features used in this project.
+
+Corsi's HAR-RV (2009) is, in some ways, the most remarkable entry on the list. By regressing one-day-ahead realised volatility on just three lags---daily, weekly, and monthly---it captures the long memory of volatility remarkably well. The theoretical argument is appealing, too: market participants at different horizons generate overlapping trading activity, and the three-lag structure is a parsimonious way to approximate that superposition. In our experiments HAR-RV posted $R^2 > 0.98$, making it a ceiling that any competing model must clear to be considered genuinely useful.
+
+\subsection{Deep Learning Approaches}
+
+Bucci (2020) ran one of the first careful comparisons between LSTMs and GARCH-family models on daily volatility. The LSTM won on out-of-sample RMSE across all test windows, with the margin widest during the COVID-19 crash when parametric distributional assumptions broke down. Kim and Won (2022) bolted an additive attention layer onto an LSTM encoder, which let them visualise which past time steps the model pays attention to---it turned out the model tends to concentrate attention near RBI-style macro announcements, exactly what you would expect.
+
+Wu and colleagues (2023) moved to a full encoder-decoder Transformer for multi-step US equity volatility. They reported improvements over both HAR-RV and LSTM on RMSE and MAE, though the gains were modest and the paper did not run the kind of ablation needed to separate persistence from feature information.
+
+Zhang, Li, and Zhu (2023) tried something clever: they initialised the first hidden layer of a neural network with the GARCH variance equation, essentially baking econometric priors into the architecture. The hybrid converged faster and overfit less than a generic MLP on the same data, which suggests there is real value in combining classical structure with flexible nonlinear capacity. Rahimikia and Poon (2023) showed that text-derived sentiment features from news headlines push up next-day volatility $R^2$ by a statistically significant margin, motivating the inclusion of exogenous signals in future versions of this project. Christensen, Siggaard, and Veliyev (2023) surveyed over a dozen methods and concluded that nonlinear models dominate, with the margin especially wide during tail events.
+
+\subsection{Regime-Switching and Interpretable Architectures}
+
+Hamilton's 1989 Markov-switching model introduced the idea of a latent state variable that flips between parameter regimes. Applied to volatility, the premise is compelling: markets clearly alternate between calm and turbulent periods, and a single parametric form should not be forced to explain both. Nystrup and colleagues (2021) showed that HMM-guided portfolio rebalancing consistently outperforms static asset allocation in Sharpe ratio terms, which encouraged us to use regime labels not just for analysis but as live conditioning features fed directly into the TFT.
+
+The TFT itself (Lim et al., 2021) was designed from the start for multi-horizon forecasting with interpretability baked in. Its Variable Selection Network assigns instance-specific importance weights to each input feature, effectively telling you exactly which features matter for each specific prediction. Gated Residual Networks let the model suppress irrelevant signals conditional on context. An LSTM encoder-decoder handles the temporal structure, and interpretable multi-head attention---where heads are combined by learned weights rather than concatenation---lets you inspect each head's contribution independently. Subsequent studies applied the TFT to equity price prediction (Olorunnimbe and Viktor, 2023), cryptocurrency volatility (Chen et al., 2024), and emerging-market regime-aware forecasting (Patel and Sharma, 2024), confirming its versatility.
+
+\section{Research Gap Identified}
+
+Pulling together the threads from the review above, four specific gaps stand out:
+
+\begin{enumerate}
+\item Nobody has applied the TFT to intraday realized volatility on Indian equities. India's market has structural idiosyncrasies---RBI policy shocks, foreign institutional investor flows, demonetisation-style disruptions---that make it fundamentally different from the US and European markets where most existing studies were conducted.
+\item Controlled ablation experiments that cleanly separate autoregressive persistence from genuine feature-driven prediction are virtually absent from the deep-learning volatility literature. Without that separation, published accuracy numbers may be largely inflated by trivial persistence effects.
+\item HMM regime labels have not been used as real-time conditioning inputs inside a TFT. Previous work either uses regimes to select among separate models or applies them post-hoc for portfolio construction.
+\item Per-stock and per-sector breakdowns of forecast performance are rarely reported, which sweeps important cross-sectional variation in predictability under the rug.
+\end{enumerate}
+
+This project addresses all four gaps simultaneously.

@@ -1,0 +1,59 @@
+\chapter{Complete Feature List}
+\label{AppendixA}
+
+Table~\ref{tab:features} lists all forty-seven features used in the RA-TFT framework.
+
+\vspace*{\fill}
+\begin{table}[h!]
+\caption{Complete List of 47 Engineered Features}
+\label{tab:features}
+\centering
+\small
+\begin{tabular}{c l p{9cm}}
+\hline
+\textbf{No.} & \textbf{Feature Name} & \textbf{Description} \\
+\hline
+\multicolumn{3}{l}{\emph{Multi-Scale RV (4)}} \\
+1--4 & RV\_1h, RV\_halfday, RV\_1d, RV\_1w & Realized volatility over 12, 38, 75, 375 bars \\
+\hline
+\multicolumn{3}{l}{\emph{HAR-RV Lags (4)}} \\
+5--8 & RV\_1bar\_lag, RV\_1h\_lag, RV\_1d\_lag75, RV\_1w\_lag & Lag offsets: 1, 12, 75, 375 bars \\
+\hline
+\multicolumn{3}{l}{\emph{Jump Detection (3)}} \\
+9 & bipower\_variation & Barndorff-Nielsen \& Shephard BPV \\
+10 & jump\_component & $J_t=\max(RV^2-BPV,0)$ \\
+11 & continuous\_component & $RV^2-J_t$ \\
+\hline
+\multicolumn{3}{l}{\emph{Range Estimators (3)}} \\
+12 & parkinson\_vol & $(\ln H/L)^2/(4\ln2)$ \\
+13 & garman\_klass\_vol & Garman-Klass OHLC estimator \\
+14 & rogers\_satchell\_vol & Drift-robust RS estimator \\
+\hline
+\multicolumn{3}{l}{\emph{GARCH \& Cross-Asset (4)}} \\
+15 & garch\_volatility & GARCH(1,1) conditional volatility \\
+16 & garch\_residual & Standardized residual \\
+17 & market\_correlation & 20-day rolling correlation with market \\
+18 & relative\_volume & Volume / 20-day average volume \\
+\hline
+\multicolumn{3}{l}{\emph{Temporal \& Session (6)}} \\
+19--20 & hour\_sin, hour\_cos & Cyclical bar-of-day encoding \\
+21--22 & day\_sin, day\_cos & Cyclical day-of-week encoding \\
+23 & is\_opening & Opening 15-min flag \\
+24 & is\_closing & Closing 15-min flag \\
+\hline
+\multicolumn{3}{l}{\emph{Additional Derived (23)}} \\
+25--27 & return\_5min/1h/1d & Log returns at multiple horizons \\
+28--29 & abs\_return\_5min/1h & Absolute returns \\
+30--31 & volume\_ratio\_1h/1d & Short-horizon volume ratios \\
+32--33 & rv\_momentum, rv\_acceleration & RV rate of change (1st \& 2nd deriv.) \\
+34--35 & skewness\_1d, kurtosis\_1d & Rolling 1-day distribution moments \\
+36--37 & max\_return\_1d, min\_return\_1d & Daily return extremes \\
+38 & range\_daily & $(H-L)/L$ daily price range \\
+39 & vwap\_deviation & Deviation from VWAP \\
+40--42 & regime\_label, regime\_duration, regime\_transition & HMM regime features \\
+43--44 & market\_rv, sector\_rv & Cross-sectional RV aggregates \\
+45--47 & rv\_rank, correlation\_momentum, volume\_surprise & Relative metrics within the panel \\
+\hline
+\end{tabular}
+\end{table}
+\vspace*{\fill}

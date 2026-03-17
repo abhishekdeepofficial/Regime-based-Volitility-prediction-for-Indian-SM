@@ -1,0 +1,161 @@
+\chapter{RESEARCH METHODOLOGY}
+\label{ChapterResearchMethodology}
+
+This chapter describes the research methodology adopted for the entire project, including data collection, feature engineering, model architecture design, training procedures, and evaluation framework.
+
+\section{Research Design Overview}
+
+The project follows an experimental research design with the following phases:
+
+\begin{enumerate}
+    \item \textbf{Data Collection:} Acquisition and preprocessing of high-frequency intraday data from the NSE.
+    \item \textbf{Feature Engineering:} Construction of 47 features from raw OHLCV data organized into six categories.
+    \item \textbf{Regime Detection:} Application of Hidden Markov Models for market state identification.
+    \item \textbf{Model Development:} Implementation of the TFT architecture with two ablation variants.
+    \item \textbf{Baseline Benchmarking:} Implementation of HAR-RV and GARCH family baselines.
+    \item \textbf{Evaluation:} Comprehensive performance assessment using multiple metrics across regime conditions.
+\end{enumerate}
+
+\section{Dataset Description}
+
+The dataset comprises 5-minute Open-High-Low-Close-Volume (OHLCV) data from fourteen highly liquid equities listed on the National Stock Exchange of India. The chosen securities represent multiple sectors to ensure diverse volatility dynamics:
+
+\begin{itemize}
+    \item \textbf{Banking:} HDFCBANK, ICICIBANK, AXISBANK, SBIN
+    \item \textbf{Information Technology:} INFY, TCS, WIPRO
+    \item \textbf{Energy:} RELIANCE, COALINDIA
+    \item \textbf{Infrastructure:} LT, ADANIPORTS
+    \item \textbf{Defence:} HAL
+    \item \textbf{Metals:} TATASTEEL
+    \item \textbf{Consumer:} TITAN
+\end{itemize}
+
+The dataset spans approximately ten years, giving $\sim$194,000 bars per stock and approximately 2.65 million rows in total. Indian equity trading runs from 9:15~AM to 3:30~PM IST, yielding 75 five-minute bars per trading day.
+
+\subsection{Data Preprocessing}
+
+The raw data underwent several preprocessing steps:
+
+\begin{enumerate}
+    \item \textbf{Outlier Removal:} Price bars with returns exceeding 10 standard deviations from the rolling mean were flagged and corrected using linear interpolation.
+    \item \textbf{Missing Value Imputation:} Gaps in the time series (due to trading halts, data feed issues) were filled using forward-fill for prices and zero-fill for volumes.
+    \item \textbf{Intraday Seasonality Adjustment:} The well-documented U-shaped intraday volatility pattern (high at open, low mid-day, rising toward close) was accounted for through normalization.
+    \item \textbf{Train-Validation Split:} A strictly chronological split was enforced with no random shuffling, ensuring temporal integrity.
+\end{enumerate}
+
+\section{Feature Engineering Pipeline}
+
+A total of 47 features were engineered from the raw price and volume data, organized into six categories as described below.
+
+\subsection{Multi-Scale Realized Volatility}
+
+Realized volatility is computed as the square root of the sum of squared high-frequency intraday returns $(r_{t,i})$:
+
+\begin{equation}
+RV_h = \sqrt{\sum_{i=1}^{h} r_{t,i}^2} \times \sqrt{252}
+\end{equation}
+
+This is annualized and calculated over multiple horizons: $h \in \{12, 38, 75, 375\}$ bars, corresponding to approximately 1 hour, half-day, 1 day, and 1 week respectively. This multi-scale approach captures volatility dynamics at different temporal resolutions.
+
+\subsection{HAR-RV Lag Features}
+
+Following the framework of Corsi \cite{corsi2009}, we explicitly supply RV lags at offsets corresponding to:
+\begin{itemize}
+    \item 1 bar (5 minutes)
+    \item 12 bars (1 hour)
+    \item 75 bars (1 day)
+    \item 375 bars (1 week)
+\end{itemize}
+
+These lag features capture the heterogeneous nature of volatility memory, where different market participants operate at different frequencies.
+
+\subsection{Jump Detection}
+
+Based on the framework of Barndorff-Nielsen and Shephard \cite{bns2004}, we isolate continuous and jump components using Bipower Variation (BPV):
+
+\begin{equation}
+BPV_t = \frac{\pi}{2} \sum_{i=2}^{75} |r_{t,i}| \cdot |r_{t,i-1}|
+\end{equation}
+
+The jump component is then extracted as:
+\begin{equation}
+J_t = \max(RV_{75}^2 - BPV_t,\; 0)
+\end{equation}
+
+Jump features help the model distinguish between smooth volatility evolution and sudden discontinuities caused by news events, earnings releases, or macroeconomic announcements.
+
+\subsection{Range-Based Estimators}
+
+Three efficient variance estimators exploiting the full price range information are computed:
+
+\textbf{Parkinson Estimator} \cite{parkinson1980}:
+\begin{equation}
+\sigma_{PK}^2 = \frac{1}{4\ln(2)} \left( \ln\frac{H}{L} \right)^2
+\end{equation}
+
+\textbf{Garman-Klass Estimator} \cite{garman1980}:
+\begin{equation}
+\sigma_{GK}^2 = \frac{1}{2} \left( \ln\frac{H}{L} \right)^2 - (2\ln 2 - 1) \left( \ln\frac{C}{O} \right)^2
+\end{equation}
+
+\textbf{Rogers-Satchell Estimator} \cite{rogers1991}:
+\begin{equation}
+\sigma_{RS}^2 = \ln\!\left(\frac{H}{C}\right) \ln\!\left(\frac{H}{O}\right) + \ln\!\left(\frac{L}{C}\right) \ln\!\left(\frac{L}{O}\right)
+\end{equation}
+
+These estimators provide more efficient variance estimates than close-to-close returns by incorporating information from daily High ($H$), Low ($L$), Open ($O$), and Close ($C$) prices.
+
+\subsection{GARCH and Cross-Asset Features}
+
+A standard GARCH(1,1) model \cite{bollerslev1986} is fitted per stock to extract conditional variance:
+
+\begin{equation}
+\sigma_t^2 = \omega + \alpha\, \epsilon_{t-1}^2 + \beta\, \sigma_{t-1}^2
+\end{equation}
+
+Additionally, a DCC-inspired proxy captures time-varying correlations between each stock and the market portfolio. This cross-asset feature enables the model to detect contagion effects and market-wide volatility spillovers.
+
+\subsection{Temporal Encodings}
+
+Cyclical sine/cosine transformations encode the time of day and day of week, alongside binary session flags:
+\begin{itemize}
+    \item \texttt{is\_opening}: First 15 minutes of the trading session
+    \item \texttt{is\_closing}: Last 15 minutes of the trading session
+\end{itemize}
+
+These features capture the well-documented intraday volatility patterns in equity markets.
+
+\section{Target Variable Construction}
+
+The prediction target is next-day realized volatility computed over the next 75 five-minute bars:
+
+\begin{equation}
+y_t = \log\!\left(1 + \sqrt{\sum_{i=t+1}^{t+75} r_i^2} \times \sqrt{252}\right)
+\end{equation}
+
+The log-transformation stabilizes the variance of the target and ensures non-negativity. By construction, this target uses exclusively future returns, ensuring zero temporal overlap between features and the prediction target.
+
+\section{Regime Detection Methodology}
+
+A four-state Gaussian Hidden Markov Model is estimated on the market-average log-returns and the daily realized volatility. The HMM parameters---transition probabilities and emission distributions---are learned using the Baum-Welch algorithm (Expectation-Maximization). The emission means of the inferred hidden states are then ordered to define four volatility regimes:
+
+\begin{enumerate}
+    \item \textbf{Low Volatility:} Calm market conditions with minimal price fluctuations.
+    \item \textbf{Normal Volatility:} Typical market conditions with moderate price movements.
+    \item \textbf{High Volatility:} Sustained elevated volatility, often during trending markets.
+    \item \textbf{Extreme Volatility:} Crisis-level volatility during market dislocations.
+\end{enumerate}
+
+These regime labels are fed as categorical features into the TFT, allowing the model to condition its predictions on the prevailing market state.
+
+\section{Evaluation Framework}
+
+The following metrics are used for comprehensive evaluation:
+
+\begin{itemize}
+    \item \textbf{$R^2$ (Coefficient of Determination):} Measures the proportion of variance explained.
+    \item \textbf{RMSE (Root Mean Square Error):} Measures average prediction error magnitude.
+    \item \textbf{MAPE (Mean Absolute Percentage Error):} Scale-independent error measure.
+    \item \textbf{DA (Directional Accuracy):} Proportion of correct volatility direction predictions.
+    \item \textbf{QLIKE:} Quasi-likelihood loss function specific to volatility forecasting; lower values indicate better predictive density.
+\end{itemize}

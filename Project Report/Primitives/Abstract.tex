@@ -1,0 +1,11 @@
+\abstract{\addtocontents{toc}{\vspace{1em}} 
+	
+	Accurately predicting volatility in stock markets is a challenging issue in computational finance, especially in emerging economies where structural breaks and regime switches are commonplace. This project presents a Regime-Aware Temporal Fusion Transformer (RA-TFT) framework designed for next-day realized volatility forecasting across 14 stocks listed on the National Stock Exchange (NSE) of India. Leveraging approximately 2.65 million five-minute OHLCV observations collected over nearly a decade, we integrate Hidden Markov Model (HMM)-derived regime labels, GARCH(1,1) conditional volatility, and DCC-inspired cross-asset correlations into a 47-feature input set processed by the TFT architecture.
+
+	A controlled ablation study separates autoregressive persistence from genuine feature-driven prediction. Model~A (with the autoregressive target input) achieves $R^2 = 0.976$ and MAPE of 1.90\%, closely matching HAR-RV baselines. Model~B (without autoregressive input) yields $R^2 = 0.258$, confirming that engineered features carry modest but genuine predictive information beyond lagged volatility. Regime-conditioned evaluation shows strong performance in low-through-high volatility states ($R^2 > 0.98$), with degradation during extreme events ($R^2 = 0.765$). The TFT's Variable Selection Network reveals that lagged daily realized volatility dominates all other features by two orders of magnitude, effectively rediscovering the HAR-RV structure from data.
+	\\ 
+	
+	\textbf{Keywords:} Volatility Forecasting, Temporal Fusion Transformer, Hidden Markov Model, GARCH, Indian Stock Market, Deep Learning
+}
+
+\clearpage

@@ -1,0 +1,32 @@
+\chapter{Per-Stock Model B Results}
+\label{AppendixB}
+
+Table \ref{tab:perstockB} shows the per-stock $R^2$ values for Model B (without autoregressive input), highlighting the variation in feature-driven predictability across sectors.
+
+\begin{table}[h!]
+\caption{Per-Stock $R^2$ for Model B (Feature-Only)}
+\label{tab:perstockB}
+\centering
+\begin{tabular}{llc}
+\hline
+\textbf{Stock} & \textbf{Sector} & \textbf{$R^2$ (Model B)} \\
+\hline
+ADANIPORTS & Infrastructure & 0.503 \\
+HAL & Defence & 0.441 \\
+COALINDIA & Energy & 0.387 \\
+TITAN & Consumer & 0.352 \\
+TATASTEEL & Metals & 0.298 \\
+LT & Infrastructure & 0.276 \\
+RELIANCE & Energy & 0.245 \\
+WIPRO & IT & 0.221 \\
+TCS & IT & 0.198 \\
+INFY & IT & 0.156 \\
+HDFCBANK & Banking & 0.023 \\
+AXISBANK & Banking & $-$0.412 \\
+ICICIBANK & Banking & $-$0.876 \\
+SBIN & Banking & $-$1.525 \\
+\hline
+\end{tabular}
+\end{table}
+
+The results reveal a clear sectoral pattern: banking stocks are the least predictable from exogenous features alone, while infrastructure and defence stocks show the highest feature-driven predictability. This pattern may reflect the greater sensitivity of banking stocks to monetary policy signals and RBI announcements that are not captured in the current feature set.

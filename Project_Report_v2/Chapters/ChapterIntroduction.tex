@@ -1,0 +1,44 @@
+\chapter{INTRODUCTION}
+\label{ChapterIntroduction}
+
+\section{Background and Motivation}
+
+Anyone who has spent time watching stock tickers knows that prices do not move smoothly. Some days the market barely twitches; on others a single news headline sends it into a tailspin. The statistical name for these swings is \emph{volatility}, and getting a handle on it matters enormously in practice. Portfolio managers size their bets according to how wild they expect markets to be. Options traders cannot price a contract without an estimate of future volatility. Banks, too, lean on these numbers---Basel~III regulations tie minimum capital buffers directly to volatility-based risk metrics.
+
+For a long time, the dominant toolkit came from econometrics. Engle introduced the ARCH model in 1982, showing that variance itself could be modelled as a time-varying quantity rather than a fixed backdrop. Bollerslev generalised the idea four years later with GARCH(1,1), which became something of an industry workhorse. Extensions followed quickly: Nelson's EGARCH modelled log-variance to sidestep negativity constraints, and GJR-GARCH added an asymmetry term to capture the well-known leverage effect where bad news jolts markets more than equally large good news.
+
+A separate line of work took a different route entirely. Instead of fitting a latent-variance process to daily close-to-close returns, researchers found that simply adding up squared five-minute returns over the trading day gives a directly observable measure called \emph{realized volatility}. Corsi built on this in 2009 with the HAR-RV model---a surprisingly simple regression on daily, weekly, and monthly RV lags that outperforms GARCH almost universally. The intuition is elegant: scalpers, swing traders, and institutional portfolio rebalancers each operate on different horizons, and the superposition of their activity creates the long-memory signature that HAR-RV captures with just three coefficients. Even today, beating HAR-RV remains a tall order.
+
+Over the past five or six years, deep learning has started to make headway. LSTMs trained on the same inputs as GARCH models showed lower out-of-sample error, particularly during the COVID-19 crash when parametric distributional assumptions fell apart. Attention-augmented recurrent networks and full Transformer architectures pushed the envelope further. But there was always a catch: most of these models work as black boxes. A risk manager can look at a GARCH equation and point to the $\alpha$ and $\beta$ coefficients; with an LSTM there is no easy equivalent. The Temporal Fusion Transformer, or TFT, proposed by Lim and colleagues in 2021, was designed from the ground up to address this gap. Its Variable Selection Networks produce feature-level importance scores at every time step, and its multi-head attention mechanism reveals which historical observations the model relies on most. For the first time, a deep learning architecture offered both competitive accuracy and a credible interpretability story.
+
+\section{Problem Statement}
+
+Despite the progress outlined above, several practical gaps remain. First, controlled experiments that separate what the autoregressive lag contributes from what the remaining features contribute are almost nonexistent in the deep learning volatility literature. This matters more than it might seem: consecutive daily RV values share 98.7\% of their constituent five-minute bars, so a model that simply parrots yesterday's number already gets $R^2 > 0.97$. Without stripping out that lag, there is no honest way to tell whether the dozens of other hand-crafted features actually help.
+
+Second, the TFT has not been tested in a structured way on Indian equity data. India's market has its own set of quirks---RBI monetary policy announcements that can whipsaw bank stocks, foreign institutional investor flows that shift sectoral dynamics, and occasional structural jolts like demonetisation---and results from US or European settings do not necessarily carry over.
+
+Third, Hidden Markov Model regime labels, which nicely partition market conditions into calm, moderate, elevated, and crisis states, are seldom fed as live conditioning inputs into a forecasting model. More commonly they are used after the fact for portfolio construction.
+
+Fourth, most studies report only aggregate performance numbers, hiding potentially large differences across sectors and individual stocks.
+
+\section{Objectives}
+
+The project set out to accomplish five things:
+
+\begin{enumerate}
+\item Collect, clean, and preprocess roughly 2.65 million five-minute OHLCV bars for fourteen liquid NSE stocks spanning a decade, and build a structured feature set of 47 indicators covering six established categories.
+\item Design and train a multi-stock Regime-Aware TFT that ingests HMM-derived regime labels as live conditioning features alongside the engineered inputs.
+\item Run a head-to-head ablation: Model~A gets the autoregressive lagged target as an input; Model~B does not. The gap between the two directly quantifies how much genuine predictive power the engineered features carry beyond mere persistence.
+\item Benchmark everything against HAR-RV, GARCH(1,1), EGARCH, and GJR-GARCH on five metrics---$R^2$, RMSE, MAPE, Directional Accuracy, and QLIKE---broken out by stock and by volatility regime.
+\item Inspect the learned VSN importance weights and attention patterns to produce an interpretable, auditable account of what the model actually does under the hood.
+\end{enumerate}
+
+\section{Scope and Limitations}
+
+\textbf{Scope.} Only price and volume data are used; the stock universe covers fourteen NSE names across banking, IT, energy, metals, infrastructure, defence, and consumer goods; the prediction horizon is one trading day ahead.
+
+\textbf{Limitations.} No external data sources such as news text or macroeconomic releases are incorporated, which almost certainly caps the feature-only model's accuracy for banking stocks whose swings are heavily driven by RBI announcements. All training was done on Kaggle's free GPU tier---around 120 hours cumulative---so the hyperparameter search was necessarily limited. Multi-step forecasting, while scientifically interesting, falls outside the current scope and is earmarked for future work.
+
+\section{Report Organization}
+
+Chapter~2 surveys the relevant literature and identifies the research gaps that this project addresses. Chapter~3 lays out the research methodology, including the dataset, feature engineering, and model architecture. Chapter~4 walks through the actual implementation. Chapter~5 presents the results, comparative analysis, cost estimation, impact assessment, SDG compliance, conclusions, and potential directions for future work.

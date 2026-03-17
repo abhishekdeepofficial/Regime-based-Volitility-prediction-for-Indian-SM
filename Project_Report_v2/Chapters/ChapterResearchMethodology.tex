@@ -1,0 +1,201 @@
+\chapter{RESEARCH METHODOLOGY}
+\label{ChapterResearchMethodology}
+
+\section{Research Design}
+
+This project follows a straightforward experimental pipeline with six phases: data acquisition, preprocessing, feature engineering, regime detection, model training, and evaluation. One important constraint runs through the whole design: the train-validation split is strictly chronological. No rows are shuffled, no future data leaks into the training set. This matters more than it might sound, because volatility is highly persistent---any temporal leakage would inflate accuracy numbers to the point of being meaningless.
+
+\section{Dataset}
+
+\subsection{Stock Selection}
+
+We chose fourteen blue-chip stocks from the NSE NIFTY~50 index, deliberately picking names from seven different sectors so that the model would be forced to generalise across industries rather than memorising a single sector's pattern. Table~\ref{tab:stocks} lists the constituents along with their approximate bar counts.
+
+\begin{table}[h!]
+\caption{Selected Stocks and Approximate 5-minute Bar Counts}
+\label{tab:stocks}
+\centering
+\small
+\begin{tabular}{llc}
+\hline
+\textbf{Ticker} & \textbf{Sector} & \textbf{Approx.\ Bars} \\
+\hline
+HDFCBANK, ICICIBANK, AXISBANK, SBIN & Banking & 194,000 each \\
+INFY, TCS, WIPRO & IT & 194,000 each \\
+RELIANCE, COALINDIA & Energy & 194,000 each \\
+LT, ADANIPORTS & Infrastructure & 188,000--190,000 \\
+HAL & Defence & 183,000 \\
+TATASTEEL & Metals & 194,000 \\
+TITAN & Consumer & 192,000 \\
+\hline
+\multicolumn{2}{l}{\textbf{Total}} & $\sim$\textbf{2.65 million} \\
+\hline
+\end{tabular}
+\end{table}
+
+The regular NSE session runs from 9:15~AM to 3:30~PM IST, which gives exactly 75 five-minute bars on any trading day. Across roughly 250 trading days per year and a ten-year span, that works out to around 194,000 bars per stock. HAL has a slightly shorter history because it was listed later.
+
+\subsection{Preprocessing}
+
+Raw CSV files needed a fair amount of cleaning before they were usable. Bars that fell outside regular trading hours were dropped entirely. Extreme intrabar returns---defined as anything more than ten standard deviations above the 50-day rolling mean---were flagged and replaced by linear interpolation from the nearest clean neighbours; in practice this affected fewer than 0.1\% of bars. Short gaps of up to 12 consecutive bars (one hour) were forward-filled for OHLC and zero-filled for volume; longer gaps were left as NaN and handled downstream. Finally, each bar's squared return was divided by the historical mean squared return for that particular bar-of-day slot, a step that removes the well-known U-shaped intraday seasonality pattern.
+
+\section{Exploratory Data Analysis}
+
+The distribution of daily realized volatility across the panel is heavily right-skewed (Table~\ref{tab:datastats}). Most days see annualised RV between 10\% and 20\%, but the tails are fat---the COVID-19 crash, demonetisation, and the GST announcement pushed several stocks past 150\%. A log transformation reduces skewness from $\sim$3.5 to below 0.6 and excess kurtosis from $\sim$19 to below 1.5.
+
+\begin{table}[h!]
+\caption{Summary Statistics for Daily Realized Volatility (Annualized \%)}
+\label{tab:datastats}
+\centering
+\scriptsize
+\begin{tabular}{lrrrrrr}
+\hline
+\textbf{Stock} & \textbf{Mean} & \textbf{Median} & \textbf{Std} & \textbf{Max} & \textbf{Skew} & \textbf{Kurt} \\
+\hline
+HDFCBANK & 18.3 & 14.2 & 12.1 & 112.4 & 3.2 & 16.8 \\
+ICICIBANK & 22.1 & 17.1 & 15.4 & 141.2 & 3.5 & 19.1 \\
+AXISBANK & 25.4 & 19.2 & 18.1 & 158.7 & 3.6 & 20.4 \\
+SBIN & 26.8 & 20.4 & 19.2 & 167.3 & 3.7 & 21.2 \\
+INFY & 19.5 & 15.3 & 13.9 & 118.6 & 3.3 & 17.5 \\
+TCS & 17.2 & 13.8 & 11.6 & 98.4 & 3.1 & 16.2 \\
+WIPRO & 21.3 & 16.7 & 14.8 & 128.9 & 3.4 & 18.3 \\
+RELIANCE & 19.8 & 15.6 & 14.1 & 124.5 & 3.3 & 17.8 \\
+COALINDIA & 24.1 & 18.5 & 17.3 & 148.6 & 3.6 & 19.8 \\
+LT & 20.6 & 16.1 & 14.5 & 131.2 & 3.4 & 18.6 \\
+ADANIPORTS & 28.7 & 21.3 & 21.4 & 182.4 & 3.8 & 22.1 \\
+HAL & 23.4 & 17.8 & 16.8 & 143.7 & 3.5 & 19.4 \\
+TATASTEEL & 26.5 & 20.1 & 18.9 & 163.8 & 3.7 & 20.8 \\
+TITAN & 21.8 & 17.0 & 15.3 & 133.6 & 3.4 & 18.7 \\
+\hline
+\textbf{Average} & \textbf{22.5} & \textbf{17.4} & \textbf{15.9} & \textbf{139.5} & \textbf{3.5} & \textbf{19.1} \\
+\hline
+\end{tabular}
+\end{table}
+
+Volatility is extremely persistent: lag-1 autocorrelation exceeds 0.99 for every stock, remaining significant past 100 lags. The first difference of log RV decorrelates after roughly five lags, revealing a two-speed structure---a slow persistent level plus fast mean-reverting innovations---that motivates the multi-horizon lag design. All fourteen stocks also exhibit the U-shaped intraday volatility curve, with banking names showing opening-bar volatility roughly 3.5$\times$ the midday trough.
+
+The HMM assigns each trading day to one of four regimes (Table~\ref{tab:regdist}). Low Volatility dominates at 80.4\% with a self-transition of 0.94, confirming that calm periods are sticky. The Extreme regime (self-transition 0.48) is transient, usually reverting within one to two days.
+
+\begin{table}[h!]
+\caption{HMM Regime Distribution and Transition Matrix}
+\label{tab:regdist}
+\centering
+\scriptsize
+\begin{tabular}{lrcccc}
+\hline
+\textbf{Regime} & \textbf{Share} & \textbf{Low} & \textbf{Normal} & \textbf{High} & \textbf{Extreme} \\
+\hline
+Low Volatility & 80.4\% & 0.94 & 0.05 & 0.01 & 0.00 \\
+Normal Volatility & 10.9\% & 0.18 & 0.72 & 0.09 & 0.01 \\
+High Volatility & 3.9\% & 0.05 & 0.31 & 0.58 & 0.06 \\
+Extreme Volatility & 4.8\% & 0.02 & 0.09 & 0.41 & 0.48 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Feature Engineering}
+
+We organised all forty-seven features into six categories. The logic behind this grouping is that each category captures a different aspect of the volatility process, and we wanted the model to have access to as broad a signal set as possible without introducing redundancy.
+
+\subsection{Multi-Scale Realized Volatility (4 features)}
+
+RV is computed at four horizons using the standard sum-of-squared-returns formula:
+\begin{equation}
+RV_h = \sqrt{\sum_{i=1}^{h} r_{t,i}^2} \times \sqrt{252}, \quad r_{t,i}=\ln\!\left(\frac{C_{t,i}}{C_{t,i-1}}\right)
+\end{equation}
+where $h \in \{12,\,38,\,75,\,375\}$ bars, corresponding to one hour, half a day, one full day, and one week respectively.
+
+\subsection{HAR-RV Lag Features (4 features)}
+
+Following Corsi's prescription, lagged RV values at offsets of 1, 12, 75, and 375 bars encode the heterogeneous-horizon structure. As it turns out, the daily lag (offset~75) ends up dominating the TFT's Variable Selection Network with an importance weight of 60.4---far above everything else---which neatly mirrors the daily coefficient's dominance in classical HAR-RV regressions.
+
+\subsection{Jump Detection (3 features)}
+
+Bipower variation, introduced by Barndorff-Nielsen and Shephard in 2004, provides a way to tease apart the continuous diffusion component of price variation from discrete jumps:
+\begin{align}
+BPV_t &= \frac{\pi}{2}\sum_{i=2}^{75}|r_{t,i}|\cdot|r_{t,i-1}| \\
+J_t &= \max\!\left(RV_{75}^2 - BPV_t,\;0\right)
+\end{align}
+Three features come out of this: the bipower variation itself, the jump component $J_t$, and the continuous residual $RV_{75}^2 - J_t$.
+
+\subsection{Range-Based Estimators (3 features)}
+
+These three estimators squeeze variance information out of the OHLC bar structure rather than relying solely on close-to-close returns:
+\begin{align}
+\sigma_{PK}^2 &= \frac{(\ln H/L)^2}{4\ln 2} & \text{(Parkinson)} \\
+\sigma_{GK}^2 &= \tfrac{1}{2}(\ln H/L)^2 - (2\ln 2 - 1)(\ln C/O)^2 & \text{(Garman--Klass)} \\
+\sigma_{RS}^2 &= \ln\!\tfrac{H}{C}\ln\!\tfrac{H}{O}+\ln\!\tfrac{L}{C}\ln\!\tfrac{L}{O} & \text{(Rogers--Satchell)}
+\end{align}
+
+\subsection{GARCH and Cross-Asset Features (4 features)}
+
+For each stock individually, a GARCH(1,1) with Student-$t$ innovations is fitted using the Python \texttt{arch} package on the training sample. The model produces a daily conditional variance estimate $\hat\sigma_t^2$ and a standardised residual. In addition, a 20-day rolling Pearson correlation between each stock's return and the equally-weighted market portfolio acts as a contagion indicator---loosely inspired by DCC-GARCH---and a relative volume ratio (current bar volume divided by the 20-day average for that bar slot) rounds out the group.
+
+\subsection{Temporal Encodings (6 features)}
+
+Sine-cosine transformations of the bar-of-day and day-of-week indices avoid the discontinuity that would arise from using raw integers. Two Boolean flags---\texttt{is\_opening} and \texttt{is\_closing}---mark the first and last 15 minutes of the session, where price discovery and end-of-day adjustments drive elevated volatility.
+
+The remaining 23 features fill in various additional angles: return z-scores at multiple horizons, rolling skewness and kurtosis, VWAP deviation, regime duration and transition indicators, cross-sectional RV rank, volume surprise, and sector-average RV. The complete list appears in Appendix~A.
+
+\subsection{Feature Input Categories}
+
+The TFT treats its inputs differently depending on whether they are static, known in the future, or only available up to the present. Our forty-seven features map as follows:
+\begin{itemize}
+\item \textbf{Static covariates:} The stock ticker, encoded as a categorical embedding. This lets the TFT learn a stock-specific baseline capturing things like average volatility level and sector-specific shock sensitivity.
+\item \textbf{Known future inputs:} The six temporal features (four cyclical encodings plus two session flags). Because the trading calendar is fixed, these values are available at prediction time.
+\item \textbf{Observed past inputs:} Everything else---the forty-one realised volatility measures, HAR lags, jump statistics, range estimators, GARCH variance, market correlation, regime labels, and derived return and volume metrics. These are known only up to bar $t$.
+\end{itemize}
+
+\section{Target Variable}
+
+The model's prediction target is one-day-ahead log realized volatility:
+\begin{equation}
+y_t = \log\!\left(1 + \sqrt{\sum_{i=t+1}^{t+75} r_i^2} \times \sqrt{252}\right)
+\end{equation}
+The log squashes the heavy right tail and stabilises the variance of the target distribution, while the constant inside the log handles days where realised volatility is near zero. Crucially, the summation runs from bar $t+1$ to $t+75$---exclusively future bars---so there is strictly zero temporal overlap between features and target.
+
+\section{Regime Detection}
+
+A four-state Gaussian HMM is fitted using the Baum-Welch algorithm with 200 iterations and 10 random restarts; the seed that achieves the highest log-likelihood is kept. The two observables fed into the HMM are the cross-sectional average of daily log-returns and the cross-sectional average of daily realised volatility across all fourteen stocks. After fitting, the four states are sorted by their emission mean to produce a stable ordering: Low, Normal, High, and Extreme. The resulting daily labels are broadcast to all 75 intraday bars of that day and enter the TFT as a categorical observed input.
+
+\section{Temporal Fusion Transformer Architecture}
+
+The TFT architecture, proposed by Lim and colleagues in 2021, has four main building blocks, each playing a specific role:
+
+\begin{enumerate}
+\item \textbf{Variable Selection Networks (VSN):} These apply learned softmax gates to produce instance-specific feature importance weights, separately for static, known-future, and observed-past inputs. The upshot is that you can inspect, for any given prediction, exactly which features the model considered most informative.
+\item \textbf{Gated Residual Networks (GRN):} Formally, $\text{GRN}(a,c)=\text{LayerNorm}(a+\text{GLU}(\eta_1))$, where $c$ is an optional context vector. The gating mechanism allows the network to suppress features that are irrelevant in a given context, acting as a trainable skip connection.
+\item \textbf{LSTM Encoder-Decoder:} The 75 historical bars are fed through an LSTM encoder whose final hidden state initialises a single-step decoder.
+\item \textbf{Interpretable Multi-Head Attention:} Four attention heads attend to the encoder outputs, but unlike standard Transformers the heads are combined via learned scalar weights rather than concatenation. This means each head's attention pattern can be examined independently.
+\end{enumerate}
+
+\section{Model Configuration}
+
+Table~\ref{tab:config} lists the key hyperparameters used in the final training run.
+
+\begin{table}[h!]
+\caption{TFT Hyperparameter Configuration}
+\label{tab:config}
+\centering
+\begin{tabular}{ll}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Parameters & 1.9~M \\
+Hidden size & 128 \\
+Attention heads & 4 \\
+Encoder length & 75 bars \\
+Prediction length & 1 step \\
+Dropout & 0.15 \\
+Learning rate & 0.001 (ReduceLROnPlateau, factor 0.5) \\
+Early stopping patience & 15 epochs \\
+Batch size & 64 \\
+Target normalizer & GroupNormalizer (per-stock, softplus) \\
+Loss & RMSE \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Evaluation Metrics}
+
+Five metrics are used throughout the evaluation. $R^2$ measures how much variance the model explains. RMSE gives the raw prediction spread in the same units as the target. MAPE provides a scale-free percentage error that is easy to interpret across stocks with different volatility levels. Directional Accuracy records the fraction of days where the model correctly predicts whether volatility will go up or down relative to the previous day. Finally, QLIKE---the quasi-likelihood loss---penalises under-prediction of volatility more heavily than over-prediction, which aligns with how risk managers actually think: underestimating future volatility is far more dangerous than overestimating it.

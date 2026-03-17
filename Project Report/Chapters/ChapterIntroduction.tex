@@ -1,0 +1,59 @@
+\chapter{INTRODUCTION}
+\label{ChapterIntroduction}
+
+\section{Background and Motivation}
+
+The ability to anticipate future price movements is central to the way modern finance is conducted. From establishing appropriate risk limits to the valuation of derivative contracts, market participants constantly try to get accurate forecasts of volatility. Volatility, which quantifies the degree to which returns vary in the market, is important for quantifying portfolio risk, establishing option prices through the Black-Scholes framework, and determining capital adequacy ratios under Basel~III regulatory requirements.
+
+Traditional econometric models have long served as the primary tools for volatility estimation and forecasting. The Generalized Autoregressive Conditional Heteroskedasticity (GARCH) family of models \cite{bollerslev1986} captures the well-documented phenomenon of volatility clustering, where periods of high and low volatility tend to persist. However, typical GARCH specifications assume parametric distributions for innovations and are inherently univariate. These limitations mean that cross-asset spillovers and non-linear dynamics often go unmodelled. Corsi's Heterogeneous Autoregressive model of Realized Volatility (HAR-RV) \cite{corsi2009} tackles well the long-memory property of volatility through its multi-horizon lag structure, but the linearity assumption remains a constraint.
+
+Deep learning models like Long Short-Term Memory (LSTM) networks and Transformer-based architectures have shown strong capabilities in time series forecasting. Nevertheless, the practical implementation of these models in quantitative finance has been hindered by a lack of model transparency. Risk managers and regulators who need to understand why a model makes specific predictions often cannot trust a black-box system. Lim et al. \cite{lim2021} proposed the Temporal Fusion Transformer (TFT) as an interpretable alternative that combines Variable Selection Networks with multi-head attention, allowing direct inspection of feature importance and temporal attention patterns.
+
+The Indian stock market presents unique challenges for volatility forecasting. As one of the largest emerging markets globally, the National Stock Exchange (NSE) of India exhibits distinct characteristics including higher volatility clustering, greater susceptibility to global shocks, and periodic regime transitions driven by both domestic policy changes and international capital flows. These features make it an ideal test bed for regime-aware forecasting approaches.
+
+\section{Problem Statement}
+
+Despite advances in deep learning for financial time series, several critical gaps remain in the volatility forecasting literature:
+
+\begin{itemize}
+    \item Most existing deep learning approaches for volatility forecasting operate as black-box models, providing little insight into which features drive predictions.
+    \item Few studies systematically separate the contribution of autoregressive persistence from genuine feature-driven prediction in deep learning volatility models.
+    \item The application of advanced attention-based architectures like the TFT to high-frequency realized volatility forecasting on Indian equity markets remains unexplored.
+    \item Market regime information is seldom integrated directly with deep learning volatility models, despite substantial evidence that volatility dynamics differ across market states.
+\end{itemize}
+
+This project addresses these gaps by developing a regime-aware forecasting framework that combines the interpretability advantages of the TFT with statistical regime detection and classical volatility features.
+
+\section{Objectives}
+
+The main objectives of this project are:
+
+\begin{enumerate}
+    \item To develop a multi-asset learning framework using TFT for joint modeling of 14 NSE equities, incorporating regime-aware conditioning through HMM-derived state labels.
+    \item To conduct a controlled ablation study that separates autocorrelation persistence from genuine feature-based prediction in the context of realized volatility forecasting.
+    \item To perform detailed interpretability analysis via the TFT's Variable Selection Network, identifying which features and time steps drive volatility predictions.
+    \item To evaluate the model's performance across different market regimes (low, normal, high, and extreme volatility) using regime-conditioned metrics.
+    \item To benchmark the proposed RA-TFT framework against established classical baselines including HAR-RV and GARCH family models.
+\end{enumerate}
+
+\section{Scope of the Project}
+
+The scope of this project encompasses:
+
+\begin{itemize}
+    \item \textbf{Data:} Five-minute OHLCV (Open-High-Low-Close-Volume) data for 14 liquid NSE equities spanning approximately 10 years, totaling approximately 2.65 million observations.
+    \item \textbf{Feature Engineering:} Construction of 47 features across six categories including multi-scale realized volatility, HAR-RV lags, jump detection statistics, range-based estimators, GARCH and cross-asset features, and temporal encodings.
+    \item \textbf{Modeling:} Implementation of the TFT architecture with two ablation variants (Model A with autoregressive input, Model B without), along with HAR-RV and GARCH family baselines.
+    \item \textbf{Evaluation:} Comprehensive evaluation using $R^2$, RMSE, MAPE, Directional Accuracy, and QLIKE metrics, with regime-conditioned performance analysis.
+\end{itemize}
+
+\section{Organization of the Report}
+
+This report is organized as follows:
+
+\begin{itemize}
+    \item \textbf{Chapter 2: Literature Survey} reviews classical volatility models, deep learning approaches for volatility forecasting, and regime-switching methodologies.
+    \item \textbf{Chapter 3: Research Methodology} describes the data collection, feature engineering pipeline, model architecture, training configuration, and evaluation framework.
+    \item \textbf{Chapter 4: Actual Work} details the implementation of the system architecture, feature extraction modules, model training, and regime detection.
+    \item \textbf{Chapter 5: Results, Discussions and Conclusions} presents the experimental results, regime-conditioned analysis, interpretability findings, and conclusions with future work.
+\end{itemize}

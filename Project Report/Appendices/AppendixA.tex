@@ -1,0 +1,55 @@
+\chapter{Feature List}
+\label{AppendixA}
+
+Table \ref{tab:features} lists all 47 features used in the RA-TFT framework.
+
+\begin{table}[h!]
+\caption{Complete List of 47 Engineered Features}
+\label{tab:features}
+\centering
+\small
+\begin{tabular}{clp{7cm}}
+\hline
+\textbf{No.} & \textbf{Feature Name} & \textbf{Description} \\
+\hline
+\multicolumn{3}{l}{\emph{Multi-Scale Realized Volatility (4 features)}} \\
+1 & RV\_1h & Realized volatility over 12 bars (1 hour) \\
+2 & RV\_halfday & Realized volatility over 38 bars (half day) \\
+3 & RV\_1d & Realized volatility over 75 bars (1 day) \\
+4 & RV\_1w & Realized volatility over 375 bars (1 week) \\
+\hline
+\multicolumn{3}{l}{\emph{HAR-RV Lag Features (4 features)}} \\
+5 & RV\_1bar\_lag & RV lagged by 1 bar \\
+6 & RV\_1h\_lag & RV lagged by 12 bars (1 hour) \\
+7 & RV\_1d\_lag75 & RV lagged by 75 bars (1 day) \\
+8 & RV\_1w\_lag & RV lagged by 375 bars (1 week) \\
+\hline
+\multicolumn{3}{l}{\emph{Jump Detection (3 features)}} \\
+9 & bipower\_variation & Bipower Variation estimate \\
+10 & jump\_component & Jump component ($J_t$) \\
+11 & continuous\_component & Continuous variation component \\
+\hline
+\multicolumn{3}{l}{\emph{Range-Based Estimators (3 features)}} \\
+12 & parkinson\_vol & Parkinson range-based estimator \\
+13 & garman\_klass\_vol & Garman-Klass estimator \\
+14 & rogers\_satchell\_vol & Rogers-Satchell estimator \\
+\hline
+\multicolumn{3}{l}{\emph{GARCH and Cross-Asset Features (4 features)}} \\
+15 & garch\_volatility & GARCH(1,1) conditional volatility \\
+16 & garch\_residual & Standardized GARCH residual \\
+17 & market\_correlation & DCC-inspired correlation with market \\
+18 & relative\_volume & Volume relative to 20-day average \\
+\hline
+\multicolumn{3}{l}{\emph{Temporal and Session Features (6 features)}} \\
+19 & hour\_sin & Sine of hour-of-day \\
+20 & hour\_cos & Cosine of hour-of-day \\
+21 & day\_sin & Sine of day-of-week \\
+22 & day\_cos & Cosine of day-of-week \\
+23 & is\_opening & Opening session flag \\
+24 & is\_closing & Closing session flag \\
+\hline
+\multicolumn{3}{l}{\emph{Additional derived features (23 features)}} \\
+25--47 & Various & Rolling statistics, return moments, volume ratios, regime indicators, and interaction terms \\
+\hline
+\end{tabular}
+\end{table}

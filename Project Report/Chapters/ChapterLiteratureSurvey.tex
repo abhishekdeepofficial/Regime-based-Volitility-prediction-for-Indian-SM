@@ -1,0 +1,89 @@
+\chapter{LITERATURE SURVEY}
+\label{ChapterLiteratureSurvey}
+
+Volatility forecasting has been a central topic in financial econometrics for over four decades. This chapter surveys the evolution from classical parametric models through deep learning approaches and regime-switching methodologies, providing the foundation for the proposed Regime-Aware Temporal Fusion Transformer framework.
+
+\section{Literature Collection \& Segregation}
+
+The literature for this project was collected from leading academic databases including IEEE Xplore, ScienceDirect, Springer, SSRN, and Google Scholar. The search focused on three primary domains: (1) volatility forecasting models, (2) deep learning for financial time series, and (3) regime-switching approaches. Over 80 papers were initially identified, from which 22 were selected based on relevance, recency, and methodological contribution.
+
+The selected literature was segregated into three categories:
+\begin{itemize}
+    \item \textbf{Classical Volatility Models:} Foundational econometric approaches including ARCH, GARCH, and realized volatility models.
+    \item \textbf{Deep Learning for Volatility:} Neural network architectures applied to volatility prediction, including LSTM, attention-based RNNs, and Transformers.
+    \item \textbf{Regime-Switching and Interpretable Architectures:} Hidden Markov Models, regime-aware strategies, and the TFT architecture.
+\end{itemize}
+
+\section{Critical Review of Literature}
+
+\subsection{Classical Volatility Models}
+
+The field of volatility modelling began with the seminal work of Engle \cite{engle1982}, who introduced the Autoregressive Conditional Heteroskedasticity (ARCH) model demonstrating that time-varying variance could be modelled as a function of past squared residuals. Bollerslev \cite{bollerslev1986} extended this into the Generalized ARCH (GARCH) framework, which added lagged conditional variance terms and became the most widely used parametric volatility model in practice.
+
+Recognizing that negative returns tend to increase volatility more than positive returns of equal magnitude---the so-called leverage effect---Nelson \cite{nelson1991} proposed the Exponential GARCH (EGARCH) model. This model uses logarithmic conditional variance, allowing asymmetric effects without requiring non-negativity constraints. Similarly, Glosten, Jagannathan, and Runkle \cite{glosten1993} introduced the GJR-GARCH model with an explicit indicator function for negative shocks.
+
+The availability of high-frequency data enabled the development of realized volatility measures as a non-parametric alternative to GARCH. Parkinson \cite{parkinson1980} proposed an efficient estimator using only daily high and low prices, while Garman and Klass \cite{garman1980} incorporated opening and closing prices for improved efficiency. Rogers and Satchell \cite{rogers1991} developed an estimator robust to drift in the underlying process. Barndorff-Nielsen and Shephard \cite{bns2004} introduced bipower variation as a means to separate the continuous and jump components of return variation.
+
+Corsi's Heterogeneous Autoregressive model of Realized Volatility (HAR-RV) \cite{corsi2009} uses daily, weekly, and monthly lagged RV as regressors in a simple linear framework. Despite its simplicity, HAR-RV remains the dominant benchmark in realized volatility forecasting due to its ability to capture long-memory patterns through the heterogeneous lag structure. In our dataset, HAR-RV achieves $R^2 > 0.98$, setting a demanding benchmark.
+
+\subsection{Deep Learning for Volatility Forecasting}
+
+The application of deep learning to financial volatility forecasting has grown rapidly. Bucci \cite{bucci2020} provided an early systematic comparison showing that LSTM networks outperform traditional GARCH models in daily volatility forecasting, particularly during crisis periods. The ability of LSTMs to capture long-range dependencies through their gating mechanism makes them naturally suited for volatility time series.
+
+Kim and Won \cite{kim2022} advanced this line of research by incorporating attention mechanisms into RNN architectures. Their attention-augmented models better focus on informative lookback periods, thereby improving realized-volatility $R^2$. This work demonstrated that not all historical observations are equally relevant for volatility prediction---some time steps carry significantly more predictive information.
+
+Wu et al. \cite{wu2023} experimented with standard encoder-decoder Transformers for multi-step volatility prediction on US stocks, reporting clear improvements over both HAR-RV and LSTM baselines. Their study highlighted the advantages of self-attention for capturing complex temporal dependencies in volatility dynamics.
+
+Hybrid approaches that combine classical econometric intuition with neural network flexibility have shown particular promise. Zhang et al. \cite{zhang2023} proposed a GARCH-informed neural network which embeds the GARCH variance equation into the inductive bias of the deep network, ensuring that the model respects known volatility dynamics while learning additional non-linear patterns. Rahimikia and Poon \cite{rahimikia2023} incorporated news sentiment scores alongside price features into a machine learning pipeline and demonstrated that textual information carries volatility-relevant value beyond what price data alone provides.
+
+Christensen et al. \cite{christensen2023} conducted a comprehensive survey of machine learning approaches to volatility forecasting, concluding that neural networks and gradient-boosted trees consistently outperform linear benchmarks, with the largest gains observed during periods of market stress.
+
+\subsection{Regime-Switching Models and the TFT Architecture}
+
+Hamilton \cite{hamilton1989} pioneered the application of Markov-switching dynamics to economic time series, providing a principled framework for modelling structural breaks. In the volatility forecasting context, regime-switching models allow different parameterizations for calm, normal, and stressed market conditions. Nystrup et al. \cite{nystrup2021} demonstrated that portfolio strategies driven by HMM-identified regimes significantly improve risk-adjusted returns, motivating the direct integration of regime labels into forecasting models.
+
+The Temporal Fusion Transformer, introduced by Lim et al. \cite{lim2021}, represents a significant advance in interpretable time series forecasting. The architecture combines several key components: Variable Selection Networks that learn instance-specific feature weights, Gated Residual Networks for effective non-linear processing, a seq2seq structure with LSTM encoder-decoder, and multi-head interpretable attention. This combination provides both accurate forecasts and transparent explanations.
+
+Olorunnimbe and Viktor \cite{olorunnimbe2023} applied the TFT to equity price prediction, demonstrating that the variable-selection outputs provide portfolio managers with actionable insights about which factors are driving market dynamics. Chen et al. \cite{chen2024} extended TFT applications to cryptocurrency markets, showing that the architecture transfers well despite the very different microstructure of digital asset markets.
+
+Patel and Sharma \cite{patel2024} examined volatility forecasting in emerging markets using a hybrid regime-aware deep learning framework, while Zhao et al. \cite{zhao2024} proposed an attention-based multi-scale volatility predictor that works directly with high-frequency data, demonstrating the benefits of multi-resolution feature extraction.
+
+\subsection{Summary of Literature Review}
+
+Table \ref{tab:litreview} summarizes the key contributions reviewed in this chapter.
+
+\begin{table}[h!]
+\caption{Summary of Key Literature Reviewed}
+\label{tab:litreview}
+\centering
+\small
+\begin{tabular}{p{3.5cm}p{2cm}p{6cm}}
+\hline
+\textbf{Author(s)} & \textbf{Year} & \textbf{Key Contribution} \\
+\hline
+Engle & 1982 & Introduced ARCH for time-varying variance \\
+Bollerslev & 1986 & Generalized ARCH to GARCH framework \\
+Hamilton & 1989 & Markov-switching for economic time series \\
+Corsi & 2009 & HAR-RV model for realized volatility \\
+Bucci & 2020 & LSTM outperforms GARCH for daily RV \\
+Lim et al. & 2021 & Temporal Fusion Transformer architecture \\
+Kim \& Won & 2022 & Attention-augmented RNNs for volatility \\
+Wu et al. & 2023 & Transformer surpasses HAR-RV and LSTM \\
+Zhang et al. & 2023 & GARCH-informed neural networks \\
+Christensen et al. & 2023 & ML consistently beats linear benchmarks \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Research Gap}
+
+While significant progress has been made in both deep learning volatility forecasting and regime-switching models, several gaps remain:
+
+\begin{enumerate}
+    \item No existing study has applied the TFT architecture specifically to intraday realized volatility forecasting on Indian equities.
+    \item The contribution of autoregressive persistence versus genuine feature-driven prediction in deep learning volatility models has rarely been systematically quantified through controlled ablation.
+    \item Direct integration of HMM regime labels as conditioning features within the TFT framework has not been explored.
+    \item Cross-stock variation in feature-driven predictability remains poorly understood, particularly in emerging market contexts.
+\end{enumerate}
+
+This project addresses these gaps through the proposed Regime-Aware Temporal Fusion Transformer framework.
