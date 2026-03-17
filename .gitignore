@@ -44,15 +44,22 @@ Thumbs.db
 .idea/
 *.code-workspace
 
-# === Build artifacts ===
-paper_build/
-paper_springer/*.aux
-paper_springer/*.log
-paper_springer/*.pdf
-paper_springer/*.out
-paper_springer/*.bbl
-paper_springer/*.blg
-paper_springer/*.synctex.gz
+# === LaTeX Build artifacts ===
+*.aux
+*.log
+*.pdf
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.idx
+*.ind
+*.ilg
+*.fls
+*.fdb_latexmk
 
 # === Large generated files ===
 *.zip
