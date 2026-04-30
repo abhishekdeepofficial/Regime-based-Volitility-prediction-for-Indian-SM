@@ -1,18 +1,42 @@
-# === Data ===
+# ============================================================
+# DATA — never commit raw/processed datasets
+# ============================================================
+Data/
 data/
 *.parquet
-*.csv
-!reports/figures/future_forecast/future_forecasts.csv
+# Allow only the lightweight sample if present
+!data/sample/
 
-# === Model Checkpoints ===
+# ============================================================
+# MODEL ARTEFACTS — too large for git; host externally
+# ============================================================
 checkpoints/
 *.ckpt
+*.pt
+*.pth
 
-# === Training Logs ===
+# ============================================================
+# TRAINING LOGS
+# ============================================================
 lightning_logs/
 tensorboard_logs/
 
-# === Python ===
+# ============================================================
+# RESULT CSVs — tracked only under reports/results/
+# ============================================================
+*.csv
+!reports/results/*.csv
+
+# ============================================================
+# JUPYTER / NOTEBOOKS
+# Ignore auto-save checkpoints; track notebooks explicitly
+# ============================================================
+.ipynb_checkpoints/
+# All notebooks tracked (demo notebook lives in notebooks/)
+
+# ============================================================
+# PYTHON CACHE & BUILD
+# ============================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -22,32 +46,35 @@ build/
 *.egg
 .eggs/
 
-# === Jupyter ===
-.ipynb_checkpoints/
-*.ipynb
-
-# === Environment ===
+# ============================================================
+# VIRTUAL ENVIRONMENTS
+# ============================================================
 .env
 .venv/
 venv/
 env/
 
-# === OS ===
+# ============================================================
+# OS & SYSTEM FILES
+# ============================================================
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
 
-# === IDE ===
+# ============================================================
+# IDE
+# ============================================================
 .vscode/
 .idea/
 *.code-workspace
 
-# === LaTeX Build artifacts ===
+# ============================================================
+# LaTeX / Academic Papers — host PDFs externally (Google Drive / ArXiv)
+# ============================================================
 *.aux
 *.log
-*.pdf
 *.out
 *.bbl
 *.blg
@@ -60,13 +87,33 @@ Thumbs.db
 *.ilg
 *.fls
 *.fdb_latexmk
+*.tex
+*.cls
+*.sty
+*.bib
+*.pdf
 
-# === Large generated files ===
+# Entire paper / report folder trees — keep off GitHub
+"Project Report"/
+Project_Report_v2/
+paper_springer/
+Regime_Aware_Multi_Asset_Volatility_Forecastingusing_Temporal_Fusion_Transformers_Final_Paper/
+
+# ============================================================
+# PRESENTATIONS
+# ============================================================
+*.pptx
+*.ppt
+*.key
+
+# ============================================================
+# LARGE ARCHIVES
+# ============================================================
 *.zip
+*.tar.gz
 *.docx
-ieee_submission_package.zip
-springer_paper.zip
-research_paper.docx
 
-# === Gemini agent ===
+# ============================================================
+# GEMINI AGENT INTERNAL FILES
+# ============================================================
 .gemini/
